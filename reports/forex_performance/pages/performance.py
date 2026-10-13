@@ -1,15 +1,15 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-
 from datetime import date, timedelta
 
-from services.forex_analytics import get_forex_transactions
+import pandas as pd
+import plotly.express as px
+import streamlit as st
 
+from services.forex_analytics import get_forex_transactions
 
 # --------------------------------------------------
 # Helper functions
 # --------------------------------------------------
+
 
 def format_compact(value, prefix=""):
     """Format large numbers using K, M, or B."""
@@ -46,9 +46,7 @@ def prepare_transactions(df):
         errors="coerce",
     )
 
-    df = df.dropna(
-        subset=["TRANSACTION_DATE", "TRANSACTION_ID"]
-    )
+    df = df.dropna(subset=["TRANSACTION_DATE", "TRANSACTION_ID"])
 
     df["VOLUME_USD"] = df["VOLUME_USD"].fillna(0)
 
@@ -62,14 +60,17 @@ def prepare_transactions(df):
 # Main report
 # --------------------------------------------------
 
+
 def show():
+    st.page_link(
+        "reports/forex_performance/pages/home.py",
+        label="Home",
+        icon=":material/home:",
+    )
 
     st.title("Forex Performance")
 
-    st.caption(
-        "Monitor business volume, monthly trends, "
-        "and operational performance."
-    )
+    st.caption("Monitor business volume, monthly trends, and operational performance.")
 
     # Load data
     df = prepare_transactions(get_forex_transactions())
@@ -171,26 +172,19 @@ def show():
     ].copy()
 
     if selected_branches:
-        filtered = filtered[
-            filtered["BRANCH"].isin(selected_branches)
-        ]
+        filtered = filtered[filtered["BRANCH"].isin(selected_branches)]
 
     if selected_currencies:
-        filtered = filtered[
-            filtered["CURRENCY"].isin(selected_currencies)
-        ]
+        filtered = filtered[filtered["CURRENCY"].isin(selected_currencies)]
 
     if selected_channels:
-        filtered = filtered[
-            filtered["CHANNEL"].isin(selected_channels)
-        ]
+        filtered = filtered[filtered["CHANNEL"].isin(selected_channels)]
 
     st.divider()
 
     if filtered.empty:
         st.info(
-            "No transactions match the selected filters. "
-            "Try changing your selections."
+            "No transactions match the selected filters. Try changing your selections."
         )
         return
 
@@ -203,9 +197,7 @@ def show():
     total_usd_volume = filtered["VOLUME_USD"].sum()
 
     average_transaction_value = (
-        total_usd_volume / total_transactions
-        if total_transactions
-        else 0
+        total_usd_volume / total_transactions if total_transactions else 0
     )
 
     active_branches = filtered["BRANCH"].nunique()
@@ -245,11 +237,7 @@ def show():
 
     monthly = filtered.copy()
 
-    monthly["MONTH"] = (
-        monthly["TRANSACTION_DATE"]
-        .dt.to_period("M")
-        .dt.to_timestamp()
-    )
+    monthly["MONTH"] = monthly["TRANSACTION_DATE"].dt.to_period("M").dt.to_timestamp()
 
     monthly = (
         monthly.groupby("MONTH", as_index=False)
@@ -269,10 +257,7 @@ def show():
         use_container_width=True,
     )
 
-    st.caption(
-        "Shows how USD-equivalent business volume changes "
-        "from month to month."
-    )
+    st.caption("Shows how USD-equivalent business volume changes from month to month.")
 
     # --------------------------------------------------
     # Visual 2: Branch contribution
@@ -300,9 +285,7 @@ def show():
         use_container_width=True,
     )
 
-    st.caption(
-        "Compare the total USD volume contributed by each branch."
-    )
+    st.caption("Compare the total USD volume contributed by each branch.")
 
     # --------------------------------------------------
     # Visual 3: Currency analysis
@@ -311,18 +294,14 @@ def show():
 
     st.subheader("Currency Analysis")
 
-    currency_data = (
-        filtered.groupby("CURRENCY", as_index=False)
-        .agg(
-            USD_VOLUME=("VOLUME_USD", "sum"),
-            TRANSACTIONS=("TRANSACTION_ID", "nunique"),
-        )
+    currency_data = filtered.groupby("CURRENCY", as_index=False).agg(
+        USD_VOLUME=("VOLUME_USD", "sum"),
+        TRANSACTIONS=("TRANSACTION_ID", "nunique"),
     )
 
-    currency_data["AVERAGE_TRANSACTION_VALUE"] = (
-        currency_data["USD_VOLUME"]
-        / currency_data["TRANSACTIONS"].replace(0, pd.NA)
-    )
+    currency_data["AVERAGE_TRANSACTION_VALUE"] = currency_data[
+        "USD_VOLUME"
+    ] / currency_data["TRANSACTIONS"].replace(0, pd.NA)
 
     st.scatter_chart(
         currency_data,
@@ -347,12 +326,9 @@ def show():
 
     st.subheader("Transaction Channel Distribution")
 
-    channel_data = (
-        filtered.groupby("CHANNEL", as_index=False)
-        .agg(
-            TRANSACTIONS=("TRANSACTION_ID", "nunique"),
-            USD_VOLUME=("VOLUME_USD", "sum"),
-        )
+    channel_data = filtered.groupby("CHANNEL", as_index=False).agg(
+        TRANSACTIONS=("TRANSACTION_ID", "nunique"),
+        USD_VOLUME=("VOLUME_USD", "sum"),
     )
 
     fig_channel = px.pie(

@@ -1,17 +1,16 @@
-import streamlit as st
-import pandas as pd
-import matplotlib 
-import plotly.express as px
-import plotly.graph_objects as go
-
 from datetime import date, timedelta
 
-from services.forex_analytics import get_forex_transactions
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
+from services.forex_analytics import get_forex_transactions
 
 # --------------------------------------------------
 # Helper functions
 # --------------------------------------------------
+
 
 def format_compact(value, prefix=""):
     """Format large numbers using K, M, or B."""
@@ -48,9 +47,7 @@ def prepare_transactions(df):
         errors="coerce",
     )
 
-    df = df.dropna(
-        subset=["TRANSACTION_DATE", "TRANSACTION_ID"]
-    )
+    df = df.dropna(subset=["TRANSACTION_DATE", "TRANSACTION_ID"])
 
     df["VOLUME_USD"] = df["VOLUME_USD"].fillna(0)
 
@@ -72,7 +69,15 @@ def prepare_transactions(df):
 # Main report
 # --------------------------------------------------
 
+
 def show():
+
+    st.page_link(
+        "reports/forex_performance/pages/home.py",
+        label="Home",
+        icon=":material/home:",
+    )
+
 
     st.title("Transaction Analysis")
 
@@ -202,36 +207,25 @@ def show():
     ].copy()
 
     if selected_branches:
-        filtered = filtered[
-            filtered["BRANCH"].isin(selected_branches)
-        ]
+        filtered = filtered[filtered["BRANCH"].isin(selected_branches)]
 
     if selected_currencies:
-        filtered = filtered[
-            filtered["CURRENCY"].isin(selected_currencies)
-        ]
+        filtered = filtered[filtered["CURRENCY"].isin(selected_currencies)]
 
     if selected_products:
-        filtered = filtered[
-            filtered["PRODUCT"].isin(selected_products)
-        ]
+        filtered = filtered[filtered["PRODUCT"].isin(selected_products)]
 
     if selected_types:
-        filtered = filtered[
-            filtered["TRANSACTION_TYPE"].isin(selected_types)
-        ]
+        filtered = filtered[filtered["TRANSACTION_TYPE"].isin(selected_types)]
 
     if selected_channels:
-        filtered = filtered[
-            filtered["CHANNEL"].isin(selected_channels)
-        ]
+        filtered = filtered[filtered["CHANNEL"].isin(selected_channels)]
 
     st.divider()
 
     if filtered.empty:
         st.info(
-            "No transactions match the selected filters. "
-            "Try changing your selections."
+            "No transactions match the selected filters. Try changing your selections."
         )
         return
 
@@ -302,19 +296,15 @@ def show():
         )
     )
 
-    styled_matrix = (
-        matrix.style
-        .background_gradient(
-            subset=["USD_VOLUME"],
-            cmap="Blues",
-        )
-        .format(
-            {
-                "TRANSACTIONS": "{:,.0f}",
-                "USD_VOLUME": "${:,.2f}",
-                "AVG_TRANSACTION_VALUE": "${:,.2f}",
-            }
-        )
+    styled_matrix = matrix.style.background_gradient(
+        subset=["USD_VOLUME"],
+        cmap="Blues",
+    ).format(
+        {
+            "TRANSACTIONS": "{:,.0f}",
+            "USD_VOLUME": "${:,.2f}",
+            "AVG_TRANSACTION_VALUE": "${:,.2f}",
+        }
     )
 
     st.dataframe(
@@ -347,9 +337,7 @@ def show():
     st.subheader("Daily Transaction Activity")
 
     daily_counts = (
-        filtered.assign(
-            TRANSACTION_DAY=filtered["TRANSACTION_DATE"].dt.normalize()
-        )
+        filtered.assign(TRANSACTION_DAY=filtered["TRANSACTION_DATE"].dt.normalize())
         .groupby("TRANSACTION_DAY")["TRANSACTION_ID"]
         .nunique()
     )
@@ -368,16 +356,11 @@ def show():
         fill_value=0,
     )
 
-    daily = daily_counts.rename(
-        "TRANSACTIONS"
-    ).reset_index()
+    daily = daily_counts.rename("TRANSACTIONS").reset_index()
 
-    daily["WEEK_START"] = (
-        daily["TRANSACTION_DAY"]
-        - pd.to_timedelta(
-            daily["TRANSACTION_DAY"].dt.weekday,
-            unit="D",
-        )
+    daily["WEEK_START"] = daily["TRANSACTION_DAY"] - pd.to_timedelta(
+        daily["TRANSACTION_DAY"].dt.weekday,
+        unit="D",
     )
 
     daily["WEEKDAY"] = daily["TRANSACTION_DAY"].dt.day_name()
@@ -392,25 +375,17 @@ def show():
         "Sunday",
     ]
 
-    heatmap_data = (
-        daily.pivot(
-            index="WEEKDAY",
-            columns="WEEK_START",
-            values="TRANSACTIONS",
-        )
-        .reindex(weekday_order)
-    )
+    heatmap_data = daily.pivot(
+        index="WEEKDAY",
+        columns="WEEK_START",
+        values="TRANSACTIONS",
+    ).reindex(weekday_order)
 
     # Use the date of each week's Monday as the x-axis label.
-    week_labels = [
-        week.strftime("%d %b %Y")
-        for week in heatmap_data.columns
-    ]
+    week_labels = [week.strftime("%d %b %Y") for week in heatmap_data.columns]
 
     # Label approximately every four weeks to reduce clutter.
-    tick_positions = list(
-        range(0, len(week_labels), 4)
-    )
+    tick_positions = list(range(0, len(week_labels), 4))
 
     fig_heatmap = go.Figure(
         data=go.Heatmap(
@@ -438,14 +413,8 @@ def show():
 
     fig_heatmap.update_xaxes(
         tickmode="array",
-        tickvals=[
-            week_labels[position]
-            for position in tick_positions
-        ],
-        ticktext=[
-            week_labels[position]
-            for position in tick_positions
-        ],
+        tickvals=[week_labels[position] for position in tick_positions],
+        ticktext=[week_labels[position] for position in tick_positions],
     )
 
     st.plotly_chart(
@@ -468,18 +437,15 @@ def show():
 
     st.subheader("Product Composition")
 
-    hierarchy_data = (
-        filtered.groupby(
-            [
-                "PRODUCT",
-                "TRANSACTION_TYPE",
-                "CHANNEL",
-            ],
-            as_index=False,
-        )
-        .agg(
-            USD_VOLUME=("VOLUME_USD", "sum"),
-        )
+    hierarchy_data = filtered.groupby(
+        [
+            "PRODUCT",
+            "TRANSACTION_TYPE",
+            "CHANNEL",
+        ],
+        as_index=False,
+    ).agg(
+        USD_VOLUME=("VOLUME_USD", "sum"),
     )
 
     fig_sunburst = px.sunburst(
